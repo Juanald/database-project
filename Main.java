@@ -1,6 +1,8 @@
 import javax.swing.*;
 import java.awt.*;
 
+import javax.swing.*;
+
 public class Main extends JFrame {
     final private Font mainFont = new Font("Courier New", Font.BOLD, 16);
     JTextField tfCustomerName, tfEmail, tfAddress, tfPhoneNumber, tfSocialInsuranceNumber, tfNationality, tfAge, tfGender, tfAccountStatus, tfPIN;
@@ -97,6 +99,25 @@ public class Main extends JFrame {
         buttonPanel.add(btnCreate);
         buttonPanel.add(btnAdd);
         buttonPanel.add(btnDrop);
+
+        btnAdd.addActionListener(e -> {
+            if (tfCustomerName.getText().trim().isEmpty() || 
+                tfEmail.getText().trim().isEmpty() || 
+                tfAddress.getText().trim().isEmpty() || 
+                tfPhoneNumber.getText().trim().isEmpty() || 
+                tfSocialInsuranceNumber.getText().trim().isEmpty() || 
+                tfNationality.getText().trim().isEmpty() || 
+                tfAge.getText().trim().isEmpty() || 
+                tfGender.getText().trim().isEmpty() || 
+                tfAccountStatus.getText().trim().isEmpty() || 
+                tfPIN.getText().trim().isEmpty()) {
+                
+                JOptionPane.showMessageDialog(this, "All fields must be filled!", "Error", JOptionPane.ERROR_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Data added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                
+            }
+        });
 
         
         JPanel mainPanel = new JPanel();
