@@ -102,6 +102,7 @@ class GUI {
         JButton selectButton = new JButton("Read Tables");
         JButton deleteButton = new JButton("Delete Record");
         JButton updateButton = new JButton("Update Record");
+        JButton insertButton = new JButton("Insert Record");
 
         
         // Add action listeners to buttons
@@ -375,6 +376,27 @@ class GUI {
             }
         });
 
+        insertButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                System.out.println("Insert button clicked.");
+                output.setText("");
+                Modal modal = new Modal(conn1);
+                String userInput = modal.createModal(frame);
+                try (Statement stmt = conn1.createStatement()) {
+                    stmt.executeUpdate(userInput);
+                    System.out.println("Executed: " + userInput);
+                    System.out.println("Inserted record");
+                    output.setText("Inserted record");
+                } catch (SQLException ex) {
+                    System.out.println(ex.getErrorCode());
+                    System.out.println(ex.getMessage());
+                    output.setText(ex.getMessage());
+
+                }
+            }
+        });
+
 
         // Set layout and add buttons to the frame
         buttonPanel.add(dropTablesButton);
@@ -384,6 +406,7 @@ class GUI {
         buttonPanel.add(selectButton);
         buttonPanel.add(deleteButton);
         buttonPanel.add(updateButton);
+        buttonPanel.add(insertButton);
         frame.add(buttonPanel, BorderLayout.NORTH);
 
         // Make the frame visible
