@@ -122,7 +122,9 @@ class GUI {
                     "DROP TABLE credit_card_accounts CASCADE CONSTRAINTS",
                     "DROP VIEW high_ccas",
                     "DROP VIEW CustomerValidTransactions",
-                    "DROP VIEW Above_A_Thousand"
+                    "DROP VIEW Above_A_Thousand",
+                    "DROP TABLE cards CASCADE CONSTRAINTS",
+                    "DROP TABLE balance_sheet CASCADE CONSTRAINTS"
                 };
                 try (Statement stmt = conn1.createStatement()) {
                     for (String query : queries) {
@@ -150,10 +152,15 @@ class GUI {
                     "CREATE TABLE Employee (Employee_ID INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, Employee_Name VARCHAR(100) NOT NULL, Email VARCHAR(100) NOT NULL UNIQUE, Address VARCHAR(255) NOT NULL, Phone_Number VARCHAR(15) NOT NULL, Age INT NOT NULL, Gender VARCHAR (20) NOT NULL, Nationality VARCHAR(50) NOT NULL)",
                     "CREATE TABLE chequing_accounts (customer_id INT, account_id INT GENERATED ALWAYS AS IDENTITY, balance DECIMAL(25, 2) DEFAULT 0, account_type VARCHAR2(255), PRIMARY KEY (customer_id, account_id), FOREIGN KEY (customer_id) REFERENCES customers(customer_id))",
                     "CREATE TABLE savings_accounts (customer_id INT, account_id INT GENERATED ALWAYS AS IDENTITY UNIQUE, balance DECIMAL(25, 2) DEFAULT 0, account_type VARCHAR2(255), interest_rate DECIMAL(10, 2), PRIMARY KEY (customer_id, account_id), FOREIGN KEY (customer_id) REFERENCES customers(customer_id))",
-                    "CREATE TABLE credit_card_accounts (customer_id INT, card_number INT UNIQUE NOT NULL, balance DECIMAL(25, 2) DEFAULT 0, credit_limit INT DEFAULT 2500, minimum_payment DECIMAL(25, 2) DEFAULT 10, expiration_date DATE NOT NULL, payment_due_date DATE NOT NULL, PRIMARY KEY (customer_id, card_number), FOREIGN KEY (customer_id) REFERENCES customers(customer_id))",
+                    "CREATE TABLE credit_card_accounts (customer_id INT, card_number INT UNIQUE NOT NULL, balance DECIMAL(25, 2) DEFAULT 0, credit_limit INT DEFAULT 2500, minimum_payment DECIMAL(25, 2) DEFAULT 10, payment_due_date DATE NOT NULL, PRIMARY KEY (customer_id, card_number), FOREIGN KEY (customer_id) REFERENCES customers(customer_id))",
+                    "CREATE TABLE cards(card_number INT PRIMARY KEY, expiration_date DATE NOT NULL)",
                     "CREATE TABLE loan (customer_id NUMBER, loan_id NUMBER GENERATED ALWAYS AS IDENTITY UNIQUE, principal DECIMAL(25, 2), interest DECIMAL(5, 2), payment_amount DECIMAL(25, 2), status VARCHAR(10) DEFAULT 'inactive' CHECK (status IN ('active', 'inactive', 'closed')), PRIMARY KEY (customer_id, loan_id), FOREIGN KEY (customer_id) REFERENCES customers(customer_id))",
                     "CREATE TABLE transactions (customer_id NUMBER, transaction_id NUMBER GENERATED ALWAYS AS IDENTITY UNIQUE, transaction_date DATE, transaction_time TIMESTAMP, account_from NUMBER, account_to NUMBER, transaction_amount DECIMAL(25, 2), PRIMARY KEY (customer_id, transaction_id), FOREIGN KEY (customer_id) REFERENCES customers(customer_id))",
-                    "CREATE TABLE monthly_statements (customer_id NUMBER, balance_sheet_id NUMBER GENERATED ALWAYS AS IDENTITY UNIQUE, transaction_id NUMBER, account_id NUMBER, account_type VARCHAR2(255), statement_period VARCHAR2(20), start_date DATE, end_date DATE, opening_balance DECIMAL(25, 2), closing_balance DECIMAL(25, 2), PRIMARY KEY (balance_sheet_id, account_id, customer_id), FOREIGN KEY (transaction_id, customer_id) REFERENCES transactions(transaction_id, customer_id))"
+                    "CREATE TABLE monthly_statements (customer_id NUMBER, balance_sheet_id NUMBER GENERATED ALWAYS AS IDENTITY UNIQUE, transaction_id NUMBER, account_id NUMBER, account_type VARCHAR2(255), statement_period VARCHAR2(20), start_date DATE, end_date DATE, opening_balance DECIMAL(25, 2), closing_balance DECIMAL(25, 2), PRIMARY KEY (balance_sheet_id, account_id, customer_id), FOREIGN KEY (transaction_id, customer_id) REFERENCES transactions(transaction_id, customer_id))",
+                    "CREATE TABLE balance_sheet (start_date DATE, end_date DATE, statement_period VARCHAR2(20), PRIMARY KEY (start_date, end_date))",
+                    "CREATE VIEW CustomerValidTransactions AS SELECT customers.customer_name,customers.customer_id, chequing_accounts.account_id, chequing_accounts.balance, transactions.transaction_id, transactions.transaction_amount FROM customers JOIN chequing_accounts ON customers.customer_id = chequing_accounts.customer_id JOIN transactions ON customers.customer_id = transactions.customer_id",
+                    "CREATE VIEW high_ccas AS SELECT c.customer_id, c.customer_name, cca.balance FROM customers c JOIN credit_card_accounts cca ON c.customer_id = cca.customer_id WHERE cca.balance > 2500",
+                    "CREATE VIEW Above_A_Thousand AS SELECT transactions.transaction_amount, transactions.transaction_date, customers.customer_name FROM transactions JOIN customers on transactions.customer_id = customers.customer_id WHERE transactions.transaction_amount > 1000",
                 };
 
                 try (Statement stmt = conn1.createStatement()) {
@@ -207,14 +214,31 @@ class GUI {
                     "INSERT INTO savings_accounts (customer_id, balance, account_type, interest_rate) VALUES(4, 5.92, 'Student Account', 0.25)",
                     "INSERT INTO savings_accounts (customer_id, balance, account_type, interest_rate) VALUES(5, 6, 'Student Account', 0.25)",
                     "INSERT INTO savings_accounts (customer_id, balance, account_type, interest_rate) VALUES(2, 0, 'Economy Account', 0.75)",
-                    "INSERT INTO credit_card_accounts (customer_id, card_number, balance, credit_limit, minimum_payment, expiration_date, payment_due_date) VALUES (1, 123456789, 0, 2500, 10, TO_DATE('17/12/2015', 'DD/MM/YYYY'), TO_DATE('17/12/2020', 'DD/MM/YYYY'))",
-                    "INSERT INTO credit_card_accounts (customer_id, card_number, balance, credit_limit, minimum_payment, expiration_date, payment_due_date) VALUES (2, 987654321, 0, 2500, 10, TO_DATE('17/12/2017', 'DD/MM/YYYY'), TO_DATE('17/12/2023', 'DD/MM/YYYY'))",
-                    "INSERT INTO credit_card_accounts (customer_id, card_number, balance, credit_limit, minimum_payment, expiration_date, payment_due_date) VALUES (3, 287654321, 1000, 10000, 10, TO_DATE('17/12/2027', 'DD/MM/YYYY'), TO_DATE('20/12/2023', 'DD/MM/YYYY'))",
+                    "INSERT INTO credit_card_accounts (customer_id, card_number, balance, credit_limit, minimum_payment, payment_due_date) VALUES (1, 123456789, 0, 2500, 10, TO_DATE('17/12/2020', 'DD/MM/YYYY'))",
+                    "INSERT INTO credit_card_accounts (customer_id, card_number, balance, credit_limit, minimum_payment, payment_due_date) VALUES (2, 987654321, 0, 2500, 10, TO_DATE('17/12/2023', 'DD/MM/YYYY'))",
+                    "INSERT INTO credit_card_accounts (customer_id, card_number, balance, credit_limit, minimum_payment, payment_due_date) VALUES (3, 287654321, 1000, 10000, 10, TO_DATE('20/12/2023', 'DD/MM/YYYY'))",
+                    "INSERT INTO cards (card_number, expiration_date) VALUES (123456789, TO_DATE('17/12/2015', 'DD/MM/YYYY'))",
+                    "INSERT INTO cards (card_number, expiration_date) VALUES (987654321, TO_DATE('17/12/2017', 'DD/MM/YYYY'))",
+                    "INSERT INTO cards (card_number, expiration_date) VALUES (287654321, TO_DATE('17/12/2027', 'DD/MM/YYYY'))",
                     "INSERT INTO loan (customer_id, principal, interest, payment_amount, status) VALUES (1, 50000.00, 5.25, 1200.00, 'active')",
                     "INSERT INTO loan (customer_id, principal, interest, payment_amount, status) VALUES (2, 10000.00, 6.00, 500.00, 'active')",
                     "INSERT INTO loan (customer_id, principal, interest, payment_amount, status) VALUES (3, 100000.00, 4.75, 2400.00, 'closed')",
                     "INSERT INTO loan (customer_id, principal, interest, payment_amount, status) VALUES (4, 70000.00, 5.50, 1100.00, 'closed')",
-                    "INSERT INTO loan (customer_id, principal, interest, payment_amount, status) VALUES (5, 150000.00, 5.25, 3500.00, 'active')"
+                    "INSERT INTO loan (customer_id, principal, interest, payment_amount, status) VALUES (5, 150000.00, 5.25, 3500.00, 'active')",
+                    "INSERT INTO loan (customer_id, principal, interest, payment_amount, status) VALUES (3, 90000.00, 5.25, 4500.00, 'active')",
+                    "INSERT INTO loan (customer_id, principal, interest, payment_amount, status) VALUES (4, 45500.00, 3.42, 1000.00, 'active')",
+                    "INSERT INTO loan (customer_id, principal, interest, payment_amount, status) VALUES (5, 8000.00, 2.67, 500.00, 'active')",
+                    "INSERT INTO transactions (customer_id, transaction_date, transaction_time, account_from, account_to, transaction_amount) VALUES (3, TO_DATE('2022-09-20', 'YYYY-MM-DD'), SYSTIMESTAMP, 1007, 1003, 2000.00)",
+                    "INSERT INTO transactions (customer_id, transaction_date, transaction_time, account_from, account_to, transaction_amount) VALUES (4, TO_DATE('2024-05-02', 'YYYY-MM-DD'), SYSTIMESTAMP, 1033, 1051, 1000.00)",
+                    "INSERT INTO transactions (customer_id, transaction_date, transaction_time, account_from, account_to, transaction_amount) VALUES (5, TO_DATE('2023-04-15', 'YYYY-MM-DD'), SYSTIMESTAMP, 1001, 1041, 250.00)",
+                    "INSERT INTO monthly_statements (customer_id, transaction_id, account_id, account_type, statement_period, start_date, end_date, opening_balance, closing_balance) VALUES (3, 1, 1011, 'CHEQUEING', 'JAN 2024', TO_DATE('2024-01-01', 'YYYY-MM-DD'), TO_DATE('2024-01-31', 'YYYY-MM-DD'), 5000.00, 4300.00)",
+                    "INSERT INTO monthly_statements (customer_id, transaction_id, account_id, account_type, statement_period, start_date, end_date, opening_balance, closing_balance) VALUES (4, 2, 1025, 'SAVINGS', 'MARCH 2024', TO_DATE('2024-03-01', 'YYYY-MM-DD'), TO_DATE('2024-03-31', 'YYYY-MM-DD'), 10000.00, 6000.00)",
+                    "INSERT INTO monthly_statements (customer_id, transaction_id, account_id, account_type, opening_balance, closing_balance) VALUES (5, 3, 1007, 'SAVINGS', 10000.00, 8000.00)",
+                    // "INSERT INTO monthly_statements (customer_id, transaction_id, account_id, account_type, opening_balance, closing_balance) VALUES (4, 3, 1033, 'SAVINGS', 5000.00, 4000.00)",
+                    // "INSERT INTO monthly_statements (customer_id, transaction_id, account_id, account_type, opening_balance, closing_balance) VALUES (5, 3, 1001, 'SAVINGS', 50000.00, 48000.00)",
+                    "INSERT INTO balance_sheet (start_date, end_date, statement_period) VALUES (TO_DATE('2022-09-01', 'YYYY-MM-DD'), TO_DATE('2022-09-30', 'YYYY-MM-DD'), 'SEP 2022')",
+                    "INSERT INTO balance_sheet (start_date, end_date, statement_period) VALUES (TO_DATE('2024-05-01', 'YYYY-MM-DD'), TO_DATE('2024-05-31', 'YYYY-MM-DD'), 'MAY 2024')",
+                    "INSERT INTO balance_sheet (start_date, end_date, statement_period) VALUES (TO_DATE('2023-04-01', 'YYYY-MM-DD'), TO_DATE('2023-04-30', 'YYYY-MM-DD'), 'APRIL 2023')"
                 };
                 try (Statement stmt = conn1.createStatement()) {
                     for (String query : insertQueries) {
@@ -243,21 +267,18 @@ class GUI {
                     "SELECT Bank_Name, Branch_Location FROM Bank GROUP BY Bank_Name, Branch_Location ORDER BY Bank_Name ASC",
                     "SELECT Gender, COUNT(*) AS Employee_Count FROM Employee GROUP BY Gender ORDER BY Employee_Count DESC",
                     "SELECT customers.customer_name,customers.customer_id, chequing_accounts.account_id, chequing_accounts.balance, transactions.transaction_id, transactions.transaction_amount FROM customers JOIN chequing_accounts ON customers.customer_id = chequing_accounts.customer_id JOIN transactions ON customers.customer_id = transactions.customer_id",
-                    "CREATE VIEW CustomerValidTransactions AS SELECT customers.customer_name,customers.customer_id, chequing_accounts.account_id, chequing_accounts.balance, transactions.transaction_id, transactions.transaction_amount FROM customers JOIN chequing_accounts ON customers.customer_id = chequing_accounts.customer_id JOIN transactions ON customers.customer_id = transactions.customer_id",
                     "SELECT * FROM CustomerValidTransactions WHERE balance < transaction_amount",
                     "SELECT customer_id, balance FROM chequing_accounts WHERE balance > 25000 ORDER BY balance DESC",
                     "SELECT account_type, SUM(balance) AS total_balance FROM chequing_accounts WHERE balance > 25000 GROUP BY account_type ORDER BY total_balance DESC",
                     "SELECT customer_id, balance, account_type FROM savings_accounts WHERE account_type = 'Student Account' ORDER BY balance DESC",
                     "SELECT DISTINCT balance FROM savings_accounts ORDER BY balance",
                     "SELECT c.customer_id, c.customer_name, chequing_accounts.balance AS chequing_balance, cca.balance AS credit_card_balance, sa.balance AS savings_balance FROM customers c JOIN chequing_accounts ON c.customer_id = chequing_accounts.customer_id JOIN credit_card_accounts cca ON c.customer_id = cca.customer_id JOIN savings_accounts sa ON c.customer_id = sa.customer_id",
-                    "CREATE VIEW high_ccas AS SELECT c.customer_id, c.customer_name, cca.balance FROM customers c JOIN credit_card_accounts cca ON c.customer_id = cca.customer_id WHERE cca.balance > 2500",
                     "SELECT * FROM high_ccas",
                     "SELECT principal as amount FROM loan GROUP BY principal ORDER BY amount ASC",
                     "SELECT transaction_date, transaction_time FROM transactions GROUP BY transaction_date, transaction_time ORDER BY transaction_date",
                     "SELECT transactions.transaction_date, transactions.transaction_amount, customers.customer_name, monthly_statements.account_type, monthly_statements.opening_balance, monthly_statements.closing_balance FROM transactions JOIN customers on transactions.customer_id = customers.customer_id JOIN monthly_statements on transactions.transaction_id = monthly_statements.transaction_id",
                     "UPDATE monthly_statements SET closing_balance = 3500.00 WHERE customer_id = 1",
                     "UPDATE monthly_statements SET closing_balance = 7000 WHERE customer_id = 2",
-                    "CREATE VIEW Above_A_Thousand AS SELECT transactions.transaction_amount, transactions.transaction_date, customers.customer_name FROM transactions JOIN customers on transactions.customer_id = customers.customer_id WHERE transactions.transaction_amount > 1000",
                     "SELECT * FROM above_a_thousand",
                     "SELECT c.customer_id, c.customer_name FROM customers c WHERE EXISTS (SELECT 1 FROM savings_accounts sa WHERE sa.customer_id = c.customer_id AND sa.interest_rate > (SELECT AVG(interest_rate) FROM savings_accounts))",
                     "SELECT c.customer_id, c.customer_name, AVG(cca.balance) AS Avg_CCA_Balance FROM credit_card_accounts cca JOIN customers c ON c.customer_id = cca.customer_id GROUP BY c.customer_id, c.customer_name HAVING AVG(cca.balance) < (SELECT AVG(balance) FROM credit_card_accounts)",
@@ -270,6 +291,7 @@ class GUI {
 							
                 try (Statement stmt = conn1.createStatement()) {
                     for (String query : selectQueries) {
+                        System.out.println("Executing: " + query);
                         ResultSet rs = stmt.executeQuery(query);
                         ResultSetMetaData metaData = rs.getMetaData();
                         int columnCount = metaData.getColumnCount();
@@ -426,6 +448,7 @@ class Modal {
                 stringOutput += ("\n");
             }
             output.setText(stringOutput.toString());
+            System.out.println(stringOutput);
         } catch (SQLException ex) {
             output.setText(ex.getMessage());
         }
