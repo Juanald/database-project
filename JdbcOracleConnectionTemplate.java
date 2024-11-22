@@ -396,8 +396,7 @@ class GUI {
                 }
             }
         });
-
-
+        
         // Set layout and add buttons to the frame
         buttonPanel.add(dropTablesButton);
         buttonPanel.add(createTablesButton);
@@ -451,7 +450,6 @@ class Modal {
 
     public static void parseResponse(ResultSet rs, JTextArea output) throws SQLException {
         String stringOutput = "";
-
         try {
             ResultSetMetaData metaData = rs.getMetaData();
             int columnCount = metaData.getColumnCount();
